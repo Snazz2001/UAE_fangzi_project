@@ -94,12 +94,13 @@ ALL_PROPERTIES: List[Property] = [Property(**row) for row in df_properties.to_di
 
 @app.get("/properties/search", response_model=List[Property])
 async def search_properties(
-    roi: float = Query(..., ge=0.0, description="Minimum desired Return on Investment (as a float, e.g., 0.05 for 5%)."),
-    area: str = Query(..., description="Desired property area (e.g., 'Business Bay', case-insensitive)."),
-    cost: float = Query(..., gt=0.0, description="Maximum desired property cost (e.g., 1000000.0 for 1 Million).")
+    roi: Optional[float] = Query(None, ge=0.0, description="Minimum desired Return on Investment (as a float, e.g., 0.05 for 5%). If not provided, this criterion is ignored."),
+    area: Optional[str] = Query(None, description="Desired property area (e.g., 'Business Bay', case-insensitive). If not provided, this criterion is ignored."),
+    cost: Optional[float] = Query(None, gt=0.0, description="Maximum desired property cost (e.g., 1000000.0 for 1 Million). If not provided, this criterion is ignored.")
 ):
     """
     Searches for properties that meet the specified ROI, area, and cost criteria.
+    Parameters are optional, and criteria will be ignored if not provided.
 
     - **roi**: The minimum expected Return on Investment you are looking for.
       (e.g., `0.07` for 7%).
@@ -108,30 +109,36 @@ async def search_properties(
     - **cost**: The maximum budget for the property.
       (e.g., `1000000.0` for 1 Million AED/USD).
 
-    Returns a list of properties that satisfy all conditions.
+    Returns a list of properties that satisfy the provided conditions.
     """
     found_properties: List[Property] = []
-    normalized_area = area.lower() # Normalize area for case-insensitive comparison
+    
+    # Normalize area if provided
+    normalized_area = area.lower() if area else None
 
-    # Filter the ALL_PROPERTIES list, which was created from the DataFrame
     for prop in ALL_PROPERTIES:
-        # Check ROI condition
-        roi_condition = prop.expected_roi >= roi
+        # Initialize conditions to True, so they don't block if parameter is None
+        roi_condition = True
+        area_condition = True
+        cost_condition = True
 
-        # Check Area condition (case-insensitive)
-        area_condition = prop.area.lower() == normalized_area
+        # Check ROI condition only if 'roi' is provided by the user
+        if roi is not None:
+            roi_condition = prop.expected_roi >= roi
 
-        # Check Cost condition
-        cost_condition = prop.cost <= cost
+        # Check Area condition only if 'area' is provided by the user
+        if normalized_area is not None:
+            area_condition = prop.area.lower() == normalized_area
+
+        # Check Cost condition only if 'cost' is provided by the user
+        if cost is not None:
+            cost_condition = prop.cost <= cost
 
         if roi_condition and area_condition and cost_condition:
             found_properties.append(prop)
 
     if not found_properties:
-        # It's good practice to provide a clear message if no properties are found
-        # instead of just an empty list, but an empty list is also valid.
-        # For this example, we'll return an empty list if no properties match.
-        pass
+        pass # An empty list is returned if no properties match
 
     return found_properties
 
@@ -142,6 +149,8 @@ async def search_properties(
 # uvicorn main:app --reload
 
 # Once running, you can access the interactive API documentation at:
-# [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+# http://127.0.0.1:8000/docs
 # Or test the endpoint directly using a URL like:
-# [http://127.0.0.1:8000/properties/search?roi=0.06&area=Business%20Bay&cost=1500000.0](http://127.0.0.1:8000/properties/search?roi=0.06&area=Business%20Bay&cost=1500000.0)
+# http://127.0.0.1:8000/properties/search?roi=0.06&cost=1500000.0  (Area will be ignored)
+# http://127.0.0.1:8000/properties/search?area=Business%20Bay (ROI and Cost will be ignored)
+# http://127.0.0.1:8000/properties/search (All properties will be returned)
