@@ -1,5 +1,6 @@
 import pandas as pd
 from typing import Dict, Optional
+from pathlib import Path
 
 # Simulate user preferences. In a real application, this would come from a database,
 # user profiles, or be inferred from past behavior.
@@ -59,21 +60,46 @@ def recommend_properties(user_id: int, properties_df: pd.DataFrame) -> pd.DataFr
 
     return recommended_df
 
-# --- Example Usage ---
-if __name__ == "__main__":
-    # Load the CSV content into a DataFrame
-    properties_df = pd.read_csv("data/properties_2025_07_04.csv")
+def main(repo_path: str) -> pd.DataFrame:
+    """
+    Main function to load properties and recommend based on user preferences.
 
+    Args:
+        repo_path (str): Path to the CSV file containing property data.
+
+    Returns:
+        pd.DataFrame: DataFrame of all properties loaded from the CSV.
+    """
+    # Load the CSV content into a DataFrame
+    file_path = repo_path / "data/properties_2025_07_04.csv"
+    properties_df = pd.read_csv(file_path)
+
+    print("\n" + "="*40 + "\n")
     print("--- All Properties ---")
     print(properties_df)
     print("\n" + "="*40 + "\n")
 
-    # Example 1: Recommend for User 101 (Business Bay, max 1.6M, min 7% ROI)
+    # Ensure the DataFrame has the expected columns
+    expected_columns = {"area", "cost", "expected_roi"}
+    if not expected_columns.issubset(properties_df.columns):
+        raise ValueError(f"CSV file must contain columns: {expected_columns}")
+    
     user_id_1 = 101
     recommendations_1 = recommend_properties(user_id_1, properties_df)
     print(f"--- Recommendations for User {user_id_1} (Business Bay, max 1.6M, min 6% ROI) ---")
     if not recommendations_1.empty:
         print(recommendations_1)
+        recommendations_1.to_csv(repo_path / f"data/recommendations_user_{user_id_1}.csv", index=False)
     else:
         print("No properties found matching criteria.")
-    print("\n" + "="*40 + "\n")
+
+
+    return properties_df
+
+# --- Example Usage ---
+if __name__ == "__main__":
+    # Load the CSV content into a DataFrame
+    properties_df = main(Path("/workspaces/anaconda"))
+
+# Add dvc pipeline
+'''dvc stage add --name recommend --deps recommend_property_by_user.py --deps data/properties_2025_07_04.csv --outs data/recommendations_user_101.csv python recommend_property_by_user.py '''

@@ -1,0 +1,8 @@
+stages:
+  recommend:
+    cmd: python recommend_property_by_user.py
+    deps:
+    - data/properties_2025_07_04.csv
+    - recommend_property_by_user.py
+    outs:
+    - data/recommendations_user_101.csv
