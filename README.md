@@ -62,3 +62,7 @@ http://127.0.0.1:8000/properties/search?roi=0.06&cost=1500000.0  (Area will be i
 
 Above, you'll find the instructions for starting the service and calling it directly via a web address. After the service is up and running, 
 you also have the option to call it from within your Python code by running request.py
+
+商业计划
+
+
